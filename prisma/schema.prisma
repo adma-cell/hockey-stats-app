@@ -1,0 +1,97 @@
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+
+model Player {
+  id           Int               @id @default(autoincrement())
+  name         String
+  jerseyNumber Int?
+  position     String?
+  gameStats    PlayerGameStat[]
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+}
+
+model Goalie {
+  id           Int              @id @default(autoincrement())
+  name         String
+  jerseyNumber Int?
+  gameStats    GoalieGameStat[]
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+}
+
+model Game {
+  id          Int               @id @default(autoincrement())
+  opponent    String
+  date        DateTime
+  finalScore  String?
+  location    String?
+  playerStats PlayerGameStat[]
+  goalieStats GoalieGameStat[]
+  scheduleEvents ScheduleEvent[]
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+}
+
+model PlayerGameStat {
+  id             Int      @id @default(autoincrement())
+  game           Game     @relation(fields: [gameId], references: [id])
+  gameId         Int
+  player         Player   @relation(fields: [playerId], references: [id])
+  playerId       Int
+  goals          Int      @default(0)
+  assists        Int      @default(0)
+  plusMinus      Int      @default(0)
+  penaltyMinutes Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([gameId, playerId])
+}
+
+model GoalieGameStat {
+  id            Int      @id @default(autoincrement())
+  game          Game     @relation(fields: [gameId], references: [id])
+  gameId        Int
+  goalie        Goalie   @relation(fields: [goalieId], references: [id])
+  goalieId      Int
+  shotsAgainst  Int      @default(0)
+  saves         Int      @default(0)
+  goalsAllowed  Int      @default(0)
+  shutout       Boolean  @default(false)
+  minutesPlayed Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([gameId, goalieId])
+}
+
+model ScheduleEvent {
+  id         Int       @id @default(autoincrement())
+  date       DateTime
+  opponent   String
+  location   String
+  isPractice Boolean   @default(false)
+  time       String
+  game       Game?     @relation(fields: [gameId], references: [id])
+  gameId     Int?
+  rsvps      RSVP[]
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+}
+
+model RSVP {
+  id        Int        @id @default(autoincrement())
+  event     ScheduleEvent @relation(fields: [eventId], references: [id])
+  eventId   Int
+  name      String
+  status    String
+  createdAt DateTime   @default(now())
+}

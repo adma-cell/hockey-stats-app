@@ -1,0 +1,400 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Manuscript Pulse – Side-by-Side Humanizer</title>
+  <style>
+    :root {
+      --bg: #0f1726;
+      --panel: #141d2f;
+      --accent: #ffc857;
+      --accent2: #57d6ff;
+      --text: #f5f7fb;
+      --muted: #9fb3c8;
+      --good: #34d399;
+      --warn: #fbbf24;
+      --bad: #f87171;
+      font-family: "Bahnschrift", "Segoe UI Variable", "Segoe UI", system-ui, -apple-system, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: radial-gradient(circle at 20% 20%, rgba(87,214,255,0.12), transparent 25%), radial-gradient(circle at 80% 10%, rgba(255,200,87,0.08), transparent 30%), var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+    header {
+      padding: 24px clamp(16px, 3vw, 42px);
+    }
+    h1 { margin: 0 0 6px; }
+    .subtext { color: var(--muted); font-size: 14px; }
+    main {
+      padding: 0 clamp(16px, 3vw, 42px) 32px;
+      display: grid;
+      gap: 16px;
+    }
+    .panel {
+      background: var(--panel);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 16px;
+      padding: 16px;
+      box-shadow: 0 14px 36px rgba(0,0,0,0.28);
+    }
+    .columns {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    @media (max-width: 1000px) { .columns { grid-template-columns: 1fr; } }
+    textarea {
+      width: 100%;
+      min-height: 200px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.08);
+      background: #0c1320;
+      color: var(--text);
+      padding: 12px;
+      font-size: 15px;
+      line-height: 1.5;
+      resize: vertical;
+    }
+    button {
+      background: linear-gradient(120deg, var(--accent), var(--accent2));
+      color: #0c1320;
+      border: none;
+      border-radius: 12px;
+      padding: 12px 16px;
+      font-weight: 700;
+      cursor: pointer;
+      width: 100%;
+      transition: transform 0.08s ease, box-shadow 0.12s ease;
+    }
+    button:hover { transform: translateY(-1px); box-shadow: 0 10px 26px rgba(0,0,0,0.3); }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 12px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.08);
+      color: var(--muted);
+      font-size: 13px;
+      margin-right: 8px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    th, td {
+      padding: 8px;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      text-align: left;
+      vertical-align: top;
+    }
+    th { color: var(--muted); font-weight: 700; }
+    .severity-1 { color: var(--good); }
+    .severity-2 { color: #a3e635; }
+    .severity-3 { color: var(--warn); }
+    .severity-4 { color: #fb923c; }
+    .severity-5 { color: var(--bad); }
+    mark {
+      background: rgba(255,200,87,0.18);
+      border-radius: 4px;
+      padding: 0 3px;
+      cursor: help;
+    }
+    .highlight-container {
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 12px;
+      padding: 12px;
+      background: #0c1320;
+      min-height: 160px;
+      white-space: pre-wrap;
+      line-height: 1.6;
+    }
+    .section-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+    .small {
+      font-size: 12px;
+      color: var(--muted);
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Manuscript Pulse — Side-by-Side Humanizer</h1>
+    <div class="subtext">Paste two blocks: Text A (human) and Text B (AI). We’ll flag AI-like patterns, show a sentence-by-sentence table, and rewrite Text B to feel more human.</div>
+  </header>
+
+  <main>
+    <section class="panel">
+      <div class="section-title">
+        <div>
+          <span class="pill">Step 1 · Input</span>
+          <span class="subtext">Paste Text A (human) and Text B (AI draft). Then click “Analyze & Rewrite”.</span>
+        </div>
+      </div>
+      <div class="columns">
+        <div>
+          <div class="subtext">Text A · Original human writing</div>
+          <textarea id="textA" placeholder="Paste the human-written reference here."></textarea>
+        </div>
+        <div>
+          <div class="subtext">Text B · AI-generated writing</div>
+          <textarea id="textB" placeholder="Paste the AI-generated text here."></textarea>
+        </div>
+      </div>
+      <div style="margin-top:12px;" class="columns">
+        <button id="analyze">Analyze & Rewrite</button>
+        <div class="subtext" style="align-self:center;">Patterns checked: repetitive transitions, uniform length, neutral/formal tone, perfection, abstract vocabulary.</div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="section-title">
+        <span class="pill">Step 2 · Side-by-side highlights</span>
+        <span class="small">Hover highlights to see pattern + AI likelihood (0–1). Low-confidence bands are marked.</span>
+      </div>
+      <div class="columns">
+        <div>
+          <div class="subtext">Text A (reference)</div>
+          <div id="highlightA" class="highlight-container"></div>
+        </div>
+        <div>
+          <div class="subtext">Text B (flagged)</div>
+          <div id="highlightB" class="highlight-container"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="section-title">
+        <span class="pill">Step 3 · Pattern analysis</span>
+        <span class="small">Sentence-by-sentence with severity 1–5 and AI likelihood 0–1; overlapping chunk score shown on top.</span>
+      </div>
+      <div class="subtext" id="overall-score">Overall AI-likeness: -- | Low-confidence band: --</div>
+      <div style="overflow:auto; max-height:360px;">
+        <table id="analysis-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Sentence</th>
+              <th>Text Block</th>
+              <th>Pattern Detected</th>
+              <th>AI Likelihood (0–1)</th>
+              <th>Severity</th>
+              <th>Suggested Change</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div style="margin-top:8px;">
+        <button id="export-csv">Export table as CSV</button>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="section-title">
+        <span class="pill">Step 4 · Humanized rewrite</span>
+        <span class="small">Applied to Text B sentences flagged above.</span>
+      </div>
+      <div id="rewrite" class="highlight-container"></div>
+    </section>
+  </main>
+
+  <script>
+    const transitions = ["additionally","furthermore","moreover","in addition","in conclusion","overall","more broadly"];
+    const neutralPhrases = ["plays a significant role","it is important to note","it should be noted","in summary","this suggests that","it is clear that","this highlights","it is evident that","a number of","in general","overall"];
+    const abstractWords = ["significant","notable","impactful","meaningful","critical","pivotal","crucial","important","factor","domain","context","framework","paradigm","aspect","role","component","utilize","demonstrate","illustrate","leverage","optimize"];
+    const contractions = [[" do not "," don't "],[" is not "," isn't "],[" cannot "," can't "],[" will not "," won't "],[" are not "," aren't "],[" have not "," haven't "]];
+
+    const textA = document.getElementById("textA");
+    const textB = document.getElementById("textB");
+    const highlightA = document.getElementById("highlightA");
+    const highlightB = document.getElementById("highlightB");
+    const tableBody = document.querySelector("#analysis-table tbody");
+    const rewriteEl = document.getElementById("rewrite");
+    const overallScoreEl = document.getElementById("overall-score");
+    const exportBtn = document.getElementById("export-csv");
+
+    function sentences(text) {
+      return text.split(/(?<=[.!?])\s+/).filter(s => s.trim().length);
+    }
+
+    function styleSignature(text) {
+      const sents = sentences(text);
+      const words = (text.toLowerCase().match(/[a-z']+/g) || []);
+      const contractionsCount = (text.match(/['’]/g) || []).length;
+      const avgLen = sents.length ? sents.reduce((a,s)=>a+(s.match(/\w+/g)||[]).length,0)/sents.length : 0;
+      const transitionRate = sents.length ? sents.filter(s => transitions.some(t => s.toLowerCase().includes(t))).length / sents.length : 0;
+      const abstractRate = words.length ? words.filter(w => abstractWords.includes(w)).length / words.length : 0;
+      return { avgLen, transitionRate, contractionRate: contractionsCount / Math.max(words.length,1), abstractRate };
+    }
+
+    function detectPatterns(sentence, avgLen, styleRef) {
+      const patterns = [];
+      const lower = sentence.toLowerCase();
+      // repetitive transitions
+      if (transitions.some(t => lower.includes(t))) patterns.push({ name:"Repetitive transition", severity:3, tip:"Replace with a direct, conversational lead-in." });
+      // uniform length (close to mean)
+      const len = (sentence.match(/\w+/g) || []).length;
+      if (avgLen > 0 && Math.abs(len - avgLen) < Math.max(4, avgLen*0.12)) patterns.push({ name:"Uniform sentence length", severity:3, tip:"Shorten or lengthen this sentence to vary rhythm." });
+      // neutral/formal tone
+      if (neutralPhrases.some(p => lower.includes(p))) patterns.push({ name:"Neutral/formal tone", severity:2, tip:"Add a personal aside or concrete detail." });
+      // abstract vocab
+      const words = lower.match(/[a-z']+/g) || [];
+      const abstractHits = words.filter(w => abstractWords.includes(w)).length;
+      if (abstractHits / Math.max(words.length,1) > 0.08) patterns.push({ name:"Abstract wording", severity:3, tip:"Swap one abstract term for a concrete example." });
+      // perfect grammar proxy: no contractions and tidy punctuation
+      const hasContraction = /['’]/.test(sentence);
+      const tidyPunct = /^[A-Z].*[.]$/.test(sentence.trim());
+      if (!hasContraction && tidyPunct) patterns.push({ name:"Polished/overly perfect", severity:2, tip:"Introduce a contraction or a softener (\"kind of\", \"pretty\")." });
+      // severity collapse
+      // style mismatch vs reference (Text A)
+      if (styleRef && Math.abs(len - styleRef.avgLen) > Math.max(6, styleRef.avgLen*0.2)) patterns.push({ name:"Length drifts from human baseline", severity:2, tip:"Match the pacing of Text A." });
+      if (styleRef && styleRef.transitionRate < 0.05 && transitions.some(t => lower.includes(t))) patterns.push({ name:"Transitions overused vs Text A", severity:2, tip:"Mirror the transition frequency of Text A." });
+      if (styleRef && styleRef.contractionRate > 0.01 && !/['’]/.test(sentence)) patterns.push({ name:"Missing contractions vs Text A", severity:2, tip:"Add a contraction to mirror Text A." });
+      const maxSeverity = patterns.reduce((m,p)=>Math.max(m,p.severity),1);
+      const likelihood = Math.min(1, 0.18*patterns.length + 0.02*Math.max(len-30,0) + 0.15*(1/(1+Math.abs(len-(styleRef?.avgLen||len)))) + (abstractHits/Math.max(words.length,1)));
+      return { patterns, len, severity:maxSeverity, likelihood: Number(likelihood.toFixed(2)) };
+    }
+
+    function highlightSentences(text, stats, styleRef) {
+      const sents = sentences(text);
+      const avg = stats.avgLen;
+      return sents.map(sent => {
+        const { patterns, severity, likelihood } = detectPatterns(sent, avg, styleRef);
+        if (!patterns.length) return sent;
+        const label = patterns.map(p=>p.name).join("; ");
+        const lowConf = likelihood > 0.45 && likelihood < 0.55 ? " (low confidence)" : "";
+        return `<mark class="severity-${severity}" title="${label} · Likelihood ${likelihood}${lowConf}">${sent}</mark>`;
+      }).join(" ");
+    }
+
+    function humanizeSentence(sentence) {
+      let out = sentence;
+      // add contraction
+      for (const [from,to] of contractions) {
+        if (out.toLowerCase().includes(from.trim())) { out = out.replace(new RegExp(from,"i"), to); break; }
+      }
+      // vary length: split long sentences
+      if ((out.match(/\w+/g)||[]).length > 24 && out.includes(",")) {
+        const parts = out.split(",");
+        out = parts[0] + "." + parts.slice(1).join(",");
+      }
+      // add casual transition
+      if (!/^(okay|honestly|to be fair|here's the thing)/i.test(out)) {
+        out = "Honestly, " + out.charAt(0).toLowerCase() + out.slice(1);
+      }
+      // add example if abstract
+      if (abstractWords.some(w => out.toLowerCase().includes(w))) {
+        out += " For example, something you saw last week would fit here.";
+      }
+      return out;
+    }
+
+    function buildTable(text, label, avgLen, rows, styleRef) {
+      const sents = sentences(text);
+      sents.forEach((sent, idx) => {
+        const { patterns, severity, likelihood } = detectPatterns(sent, avgLen, styleRef);
+        const patNames = patterns.length ? patterns.map(p=>p.name).join(", ") : "—";
+        const tip = patterns.length ? patterns[0].tip : "Looks fine.";
+        rows.push({
+          id: rows.length+1,
+          sentence: sent,
+          block: label,
+          pattern: patNames,
+          likelihood,
+          severity,
+          suggestion: tip
+        });
+      });
+    }
+
+    function analyze() {
+      const A = textA.value.trim();
+      const B = textB.value.trim();
+      if (!A && !B) return;
+      const lenB = sentences(B).map(s => (s.match(/\w+/g)||[]).length);
+      const avgLenB = lenB.reduce((a,b)=>a+b,0) / Math.max(lenB.length,1);
+      const lenA = sentences(A).map(s => (s.match(/\w+/g)||[]).length);
+      const avgLenA = lenA.reduce((a,b)=>a+b,0) / Math.max(lenA.length,1);
+      const styleA = styleSignature(A);
+
+      highlightA.innerHTML = A ? highlightSentences(A, { avgLen: avgLenA }, styleA) : "";
+      highlightB.innerHTML = B ? highlightSentences(B, { avgLen: avgLenB }, styleA) : "";
+
+      const rows = [];
+      buildTable(A, "A", avgLenA, rows, styleA);
+      buildTable(B, "B", avgLenB, rows, styleA);
+      tableBody.innerHTML = rows.map(r => `
+        <tr>
+          <td>${r.id}</td>
+          <td>${r.sentence}</td>
+          <td>${r.block}</td>
+          <td>${r.pattern}</td>
+          <td>${r.likelihood?.toFixed(2) ?? "--"}</td>
+          <td class="severity-${r.severity}">${r.severity}</td>
+          <td>${r.suggestion}</td>
+        </tr>
+      `).join("");
+
+      const bRows = rows.filter(r => r.block === "B");
+      const chunkScore = computeChunkScore(bRows);
+      const meanSentence = bRows.reduce((a,r)=>a+(r.likelihood||0),0)/Math.max(bRows.length,1);
+      const lowConf = meanSentence > 0.45 && meanSentence < 0.55;
+      overallScoreEl.textContent = `Overall AI-likeness: ${(chunkScore*100).toFixed(1)}% | Low-confidence band: ${lowConf ? "Yes (treat cautiously)" : "No"}`;
+
+      // Humanize B
+      const rewritten = sentences(B).map(sent => {
+        const { patterns } = detectPatterns(sent, avgLenB, styleA);
+        if (!patterns.length) return sent;
+        let h = humanizeSentence(sent);
+        // adjust length toward Text A average
+        const len = (h.match(/\w+/g)||[]).length;
+        if (styleA.avgLen && Math.abs(len - styleA.avgLen) > 6) {
+          h += " " + "Here's a quick example from A's style to keep pace.".replace("A's", "this");
+        }
+        return h;
+      }).join(" ");
+      rewriteEl.textContent = rewritten || "No Text B provided.";
+    }
+
+    function computeChunkScore(rows) {
+      if (!rows.length) return 0;
+      // overlapping chunks of 5 sentences
+      const lik = rows.map(r => r.likelihood || 0);
+      const size = Math.min(5, lik.length);
+      const chunks = [];
+      for (let i=0; i<=lik.length-size; i++) {
+        const window = lik.slice(i, i+size);
+        chunks.push(window.reduce((a,b)=>a+b,0)/size);
+      }
+      return chunks.length ? chunks.reduce((a,b)=>a+b,0)/chunks.length : lik.reduce((a,b)=>a+b,0)/lik.length;
+    }
+
+    document.getElementById("analyze").addEventListener("click", analyze);
+    exportBtn.addEventListener("click", () => {
+      const rows = Array.from(tableBody.querySelectorAll("tr")).map(tr => Array.from(tr.children).map(td => td.textContent));
+      if (!rows.length) return;
+      const header = ["#", "Sentence", "Text Block", "Pattern", "AI Likelihood", "Severity", "Suggested Change"];
+      const csv = [header.join(",")].concat(rows.map(r => r.map(cell => `"${cell.replace(/"/g,'""')}"`).join(","))).join("\n");
+      const blob = new Blob([csv], { type: "text/csv" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "analysis.csv";
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,11 @@
+{
+  "/page": "app/page.js",
+  "/games/page": "app/games/page.js",
+  "/goalies/page": "app/goalies/page.js",
+  "/api/goalies/route": "app/api/goalies/route.js",
+  "/api/games/route": "app/api/games/route.js",
+  "/schedule/page": "app/schedule/page.js",
+  "/api/players/route": "app/api/players/route.js",
+  "/api/rsvps/route": "app/api/rsvps/route.js",
+  "/api/schedule/route": "app/api/schedule/route.js"
+}

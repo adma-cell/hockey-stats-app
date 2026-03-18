@@ -1,0 +1,155 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import { AdminGate } from "./components/AdminGate";
+import { api } from "./utils/client";
+import type { Player } from "@prisma/client";
+
+type PlayerWithTotals = Player & {
+  totals: {
+    gamesPlayed: number;
+    goals: number;
+    assists: number;
+    points: number;
+    plusMinus: number;
+    penaltyMinutes: number;
+  };
+};
+
+export default function SkatersPage() {
+  const [players, setPlayers] = useState<PlayerWithTotals[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [sortKey, setSortKey] = useState<keyof PlayerWithTotals["totals"] | "name">("name");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+
+  const load = async () => {
+    setLoading(true);
+    const data = await api<PlayerWithTotals[]>("/api/stats/players");
+    setPlayers(data);
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    load();
+  }, []);
+
+  const sorted = useMemo(() => {
+    return [...players].sort((a, b) => {
+      const dir = sortDir === "asc" ? 1 : -1;
+      if (sortKey === "name") return a.name.localeCompare(b.name) * dir;
+      return ((a.totals as any)[sortKey] - (b.totals as any)[sortKey]) * dir;
+    });
+  }, [players, sortKey, sortDir]);
+
+  const toggleSort = (key: typeof sortKey) => {
+    if (sortKey === key) setSortDir(sortDir === "asc" ? "desc" : "asc");
+    else {
+      setSortKey(key);
+      setSortDir("desc");
+    }
+  };
+
+  return (
+    <div className="grid" style={{ gap: "1.25rem" }}>
+      <div className="card">
+        <h1 style={{ marginTop: 0 }}>Skater Stats</h1>
+        <p style={{ color: "var(--muted)" }}>
+          Totals auto-calc from game entries. Tap a header to sort.
+        </p>
+        {loading ? (
+          <p>Loading </p>
+        ) : (
+          <div className="table-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th><button onClick={() => toggleSort("name")}>Player</button></th>
+                  <th>#</th>
+                  <th><button onClick={() => toggleSort("gamesPlayed")}>GP</button></th>
+                  <th><button onClick={() => toggleSort("goals")}>G</button></th>
+                  <th><button onClick={() => toggleSort("assists")}>A</button></th>
+                  <th><button onClick={() => toggleSort("points")}>PTS</button></th>
+                  <th><button onClick={() => toggleSort("plusMinus")}>+/-</button></th>
+                  <th><button onClick={() => toggleSort("penaltyMinutes")}>PIM</button></th>
+                </tr>
+              </thead>
+              <tbody>
+                {sorted.map((p) => (
+                  <tr key={p.id}>
+                    <td>{p.name}</td>
+                    <td>{p.jerseyNumber ?? " "}</td>
+                    <td>{p.totals.gamesPlayed}</td>
+                    <td>{p.totals.goals}</td>
+                    <td>{p.totals.assists}</td>
+                    <td style={{ fontWeight: 700 }}>{p.totals.points}</td>
+                    <td>{p.totals.plusMinus}</td>
+                    <td>{p.totals.penaltyMinutes}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      <AdminGate>
+        {(adminKey) => <PlayerEditor adminKey={adminKey} onSaved={load} />}
+      </AdminGate>
+    </div>
+  );
+}
+
+function PlayerEditor({ adminKey, onSaved }: { adminKey: string | null; onSaved: () => void }) {
+  const [form, setForm] = useState({ name: "", jerseyNumber: "", position: "" });
+  const [status, setStatus] = useState<string | null>(null);
+
+  const submit = async () => {
+    if (!adminKey) return setStatus("Enter the admin password to edit.");
+    await api("/api/players", {
+      method: "POST",
+      body: JSON.stringify({
+        name: form.name,
+        jerseyNumber: form.jerseyNumber ? Number(form.jerseyNumber) : null,
+        position: form.position || null
+      })
+    }, adminKey);
+    setStatus("Saved ?");
+    setForm({ name: "", jerseyNumber: "", position: "" });
+    onSaved();
+  };
+
+  return (
+    <div className="card">
+      <h3 style={{ marginTop: 0 }}>Add a player</h3>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "0.5rem" }}>
+        <input
+          placeholder="Name"
+          value={form.name}
+          onChange={(e) => setForm({ ...form, name: e.target.value })}
+          style={{ padding: "0.6rem", borderRadius: 8, border: "1px solid var(--border)" }}
+        />
+        <input
+          placeholder="Jersey #"
+          value={form.jerseyNumber}
+          onChange={(e) => setForm({ ...form, jerseyNumber: e.target.value })}
+          style={{ padding: "0.6rem", borderRadius: 8, border: "1px solid var(--border)" }}
+        />
+        <input
+          placeholder="Position"
+          value={form.position}
+          onChange={(e) => setForm({ ...form, position: e.target.value })}
+          style={{ padding: "0.6rem", borderRadius: 8, border: "1px solid var(--border)" }}
+        />
+      </div>
+      <div style={{ marginTop: "0.75rem", display: "flex", gap: "0.5rem" }}>
+        <button
+          onClick={submit}
+          style={{ padding: "0.55rem 0.9rem", borderRadius: 10, border: "none", background: "var(--accent)", color: "white", fontWeight: 700 }}
+        >
+          Save player
+        </button>
+        {status && <span style={{ color: "var(--muted)" }}>{status}</span>}
+      </div>
+    </div>
+  );
+}
