@@ -1,4 +1,4 @@
-import { RSVPStatus } from "@prisma/client";
+
 
 export type PlayerInput = {
   name: string;

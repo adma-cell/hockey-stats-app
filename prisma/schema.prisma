@@ -95,3 +95,9 @@ model RSVP {
   status    String
   createdAt DateTime   @default(now())
 }
+enum RSVPStatus {
+  YES
+  NO
+  MAYBE
+}
+
